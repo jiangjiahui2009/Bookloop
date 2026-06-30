@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from books import BOOKS, BUILTIN_BOOKS, add_custom_book, remove_custom_book, update_book_soul
 from book_library import BOOK_LIBRARY, lookup_in_library
 from config import load_config, save_config, config_for_client, config_public
+from batch import start_batch
 from distiller import start_distill
 from matcher import match_books
 from models import ChatRequest, ChatResponse, AddBookRequest, AddBookResponse
@@ -32,6 +33,7 @@ class AppState:
     matcher_model: str = ""
     responder_model: str = ""
     distill_tasks: dict = {}
+    batch_tasks: dict = {}
 
 
 state = AppState()
@@ -490,6 +492,56 @@ async def check_distillation(task_id: str):
         }
         # 清理任务
         del state.distill_tasks[task_id]
+    return resp
+
+
+# ═══════════ 批量投喂 API ═══════════
+
+class BatchRequest(BaseModel):
+    folder_path: str
+
+
+@app.post("/api/batch")
+async def start_batch_task(request: BatchRequest):
+    """指定文件夹路径，启动批量投喂"""
+    if not state.client:
+        raise HTTPException(status_code=503, detail="请先配置 API Key")
+
+    folder = request.folder_path.strip()
+    if not folder:
+        raise HTTPException(status_code=400, detail="文件夹路径不能为空")
+
+    import os
+    if not os.path.isdir(folder):
+        raise HTTPException(status_code=400, detail="文件夹不存在")
+
+    config = load_config()
+    max_responders = int(config.get("max_responders", 5))
+    task_id = start_batch(
+        state.client, state.matcher_model, state.responder_model,
+        folder, BOOKS, max_responders, state.batch_tasks,
+    )
+    return {"task_id": task_id}
+
+
+@app.get("/api/batch/{task_id}")
+async def check_batch_task(task_id: str):
+    """查询批量处理进度"""
+    task = state.batch_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在或已过期")
+
+    resp = {
+        "status": task["status"],
+        "progress": task["progress"],
+        "stage": task["stage"],
+        "current": task["current"],
+        "total": task["total"],
+        "error": task.get("error"),
+    }
+    # 完成后清理
+    if task["status"] in ("done", "error"):
+        del state.batch_tasks[task_id]
     return resp
 
 

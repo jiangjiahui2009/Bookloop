@@ -84,3 +84,25 @@ export async function checkDistill(taskId) {
   }
   return res.json();
 }
+
+export async function startBatch(folderPath) {
+  const res = await fetch(`${BASE}/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ folder_path: folderPath }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || '启动失败');
+  }
+  return res.json();
+}
+
+export async function checkBatch(taskId) {
+  const res = await fetch(`${BASE}/batch/${taskId}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || '查询失败');
+  }
+  return res.json();
+}

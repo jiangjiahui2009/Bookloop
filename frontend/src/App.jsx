@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ChatWindow from './components/ChatWindow';
 import InputBar from './components/InputBar';
 import Sidebar from './components/Sidebar';
+import BatchModal from './components/BatchModal';
 import SettingsModal from './components/SettingsModal';
 import { fetchBooks, sendMessage } from './api';
 
@@ -20,6 +21,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [configOk, setConfigOk] = useState(null); // null=loading, true/false
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showBatch, setShowBatch] = useState(false);
 
   const loadBooks = useCallback(() => {
     fetchBooks()
@@ -127,7 +129,7 @@ export default function App() {
           )}
 
           <ChatWindow messages={messages} typing={typing} />
-          <InputBar onSend={handleSend} disabled={typing || !configOk} books={books} />
+          <InputBar onSend={handleSend} disabled={typing || !configOk} books={books} onOpenBatch={() => setShowBatch(true)} />
         </div>
       </div>
 
@@ -136,6 +138,10 @@ export default function App() {
           onClose={() => setShowSettings(false)}
           onSaved={handleSettingsSaved}
         />
+      )}
+
+      {showBatch && (
+        <BatchModal onClose={() => setShowBatch(false)} />
       )}
     </div>
   );

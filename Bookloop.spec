@@ -20,6 +20,7 @@ a = Analysis(
         (str(BACKEND_DIR / "models.py"), "."),
         (str(BACKEND_DIR / "book_library.py"), "."),
         (str(BACKEND_DIR / "distiller.py"), "."),
+        (str(BACKEND_DIR / "batch.py"), "."),
         (str(FRONTEND_DIST), "frontend/dist"),
     ],
     hiddenimports=[

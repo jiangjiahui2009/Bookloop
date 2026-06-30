@@ -10,10 +10,11 @@ const PLACEHOLDERS = [
   '输入 @ 可以点名书友回复...',
 ];
 
-export default function InputBar({ onSend, disabled, books }) {
+export default function InputBar({ onSend, disabled, books, onOpenBatch }) {
   const [text, setText] = useState('');
   const [placeholder, setPlaceholder] = useState(PLACEHOLDERS[0]);
   const [mentionQuery, setMentionQuery] = useState(null); // { start, query } or null
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -120,26 +121,57 @@ export default function InputBar({ onSend, disabled, books }) {
       )}
 
       <div className="flex items-end" style={{ gap: '12px' }}>
-        <textarea
-          ref={inputRef}
-          className="flex-1 resize-none rounded-xl border border-gray-200 bg-white text-[14px] leading-relaxed outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400 placeholder-gray-400 max-h-32"
-          style={{ padding: '12px 20px' }}
-          rows={1}
-          placeholder={placeholder}
-          value={text}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
-          onInput={(e) => {
-            e.target.style.height = 'auto';
-            e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
-          }}
-        />
+        <div className="flex-1 relative">
+          <textarea
+            ref={inputRef}
+            className="w-full resize-none rounded-xl border border-gray-200 bg-white text-[14px] leading-relaxed outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400 placeholder-gray-400 max-h-32"
+            style={{ padding: '12px 48px 12px 20px' }}
+            rows={1}
+            placeholder={placeholder}
+            value={text}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            onInput={(e) => {
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+            }}
+          />
+
+          {/* + 按钮 — 位于输入框内右侧 */}
+          <div className="absolute" style={{ right: '8px', top: '50%', transform: 'translateY(-50%)' }}>
+            <button
+              onClick={() => setShowPlusMenu((v) => !v)}
+              className="text-gray-400 hover:text-gray-500 transition-colors flex items-center justify-center rounded-full"
+              style={{ width: '24px', height: '24px', fontSize: '18px', lineHeight: 1 }}
+            >
+              +
+            </button>
+            {showPlusMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowPlusMenu(false)} />
+                <div
+                  className="absolute bg-white border border-gray-200 rounded-lg shadow-lg z-20 whitespace-nowrap"
+                  style={{ bottom: '100%', right: '0', marginBottom: '6px' }}
+                >
+                  <button
+                    onClick={() => { setShowPlusMenu(false); onOpenBatch?.(); }}
+                    className="block w-full text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-lg"
+                    style={{ padding: '8px 16px' }}
+                  >
+                    批量回复
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         <button
           onClick={handleSend}
           disabled={disabled || !text.trim()}
           className="bg-[#95ec69] text-gray-800 hover:bg-[#7ddc4f] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 flex items-center justify-center"
-          style={{ width: '30px', height: '30px', borderRadius: '9px', boxShadow: '0 2px 8px rgba(149,236,105,0.4)', fontSize: '16px' }}
+          style={{ width: '30px', height: '30px', borderRadius: '9px', boxShadow: '0 2px 8px rgba(149,236,105,0.4)', fontSize: '16px', marginBottom: '7px' }}
         >
           ↑
         </button>
