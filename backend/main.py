@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from books import BOOKS, BUILTIN_BOOKS, add_custom_book, remove_custom_book, update_book_soul
 from book_library import BOOK_LIBRARY, lookup_in_library
-from config import load_config, save_config, config_for_client, config_public
+from config import load_config, save_config, config_for_client, config_public, PROVIDERS
 from batch import start_batch
 from distiller import start_distill
 from matcher import match_books
@@ -115,6 +115,9 @@ class ConfigResponse(BaseModel):
     max_responders: int = 5
     has_api_key: bool = False
     connected: bool = False
+    connection_error: str = ""
+    available_providers: dict = {}
+    provider: str = "custom"
 
 
 @app.get("/api/config", response_model=ConfigResponse)
@@ -125,6 +128,7 @@ async def get_config():
     return ConfigResponse(
         **public,
         connected=state.client is not None,
+        available_providers=PROVIDERS,
     )
 
 
@@ -134,6 +138,7 @@ class UpdateConfigRequest(BaseModel):
     matcher_model: str = ""
     responder_model: str = ""
     max_responders: int | str | None = None
+    provider: str = ""
 
 
 @app.post("/api/config", response_model=ConfigResponse)
@@ -155,6 +160,10 @@ async def update_config(request: UpdateConfigRequest):
         except (ValueError, TypeError):
             pass
 
+    if request.provider:
+        config["provider"] = request.provider
+
+    connection_error = ""
     ok = _init_client(config)
     if ok:
         # 真正测试 API 连接
@@ -164,9 +173,10 @@ async def update_config(request: UpdateConfigRequest):
                 messages=[{"role": "user", "content": "hi"}],
                 max_tokens=5,
             )
-        except Exception:
+        except Exception as e:
             ok = False
             state.client = None
+            connection_error = str(e)
 
     save_config(config)
 
@@ -174,6 +184,8 @@ async def update_config(request: UpdateConfigRequest):
     return ConfigResponse(
         **public,
         connected=ok,
+        connection_error=connection_error,
+        available_providers=PROVIDERS,
     )
 
 

@@ -14,12 +14,46 @@ if getattr(sys, 'frozen', False):
 else:
     CONFIG_PATH = Path(__file__).parent / "config.json"
 
+PROVIDERS = {
+    "deepseek": {
+        "name": "DeepSeek",
+        "base_url": "https://api.deepseek.com",
+        "matcher_model": "deepseek-chat",
+        "responder_model": "deepseek-chat",
+    },
+    "minimax": {
+        "name": "MiniMax",
+        "base_url": "https://api.minimax.io/v1",
+        "matcher_model": "MiniMax-M2.7-highspeed",
+        "responder_model": "MiniMax-M3",
+    },
+    "glm": {
+        "name": "智谱 GLM",
+        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "matcher_model": "glm-4-flash",
+        "responder_model": "glm-4-plus",
+    },
+    "volcengine": {
+        "name": "火山引擎",
+        "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+        "matcher_model": "doubao-1.5-lite-256k",
+        "responder_model": "doubao-1.5-pro-256k",
+    },
+    "custom": {
+        "name": "自定义",
+        "base_url": "",
+        "matcher_model": "",
+        "responder_model": "",
+    },
+}
+
 DEFAULTS = {
     "api_key": "",
-    "base_url": "https://api.minimax.io/v1",
-    "matcher_model": "MiniMax-M2.7-highspeed",
-    "responder_model": "MiniMax-M3",
+    "base_url": "",
+    "matcher_model": "",
+    "responder_model": "",
     "max_responders": 5,
+    "provider": "custom",
 }
 
 
@@ -74,4 +108,5 @@ def config_public(config: dict) -> dict:
     elif key:
         public["api_key"] = "****"
     public["has_api_key"] = bool(key)
+    public["provider"] = config.get("provider", "custom")
     return public

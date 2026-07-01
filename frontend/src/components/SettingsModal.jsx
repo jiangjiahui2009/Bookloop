@@ -6,9 +6,9 @@ const TABS = [
     label: '大模型',
     fields: [
       { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'sk-...' },
-      { key: 'base_url', label: 'Base URL', type: 'text', placeholder: 'https://api.minimax.io/v1' },
-      { key: 'matcher_model', label: '匹配模型', type: 'text', placeholder: 'MiniMax-M2.7-highspeed' },
-      { key: 'responder_model', label: '回复模型', type: 'text', placeholder: 'MiniMax-M3' },
+      { key: 'base_url', label: 'Base URL', type: 'text', placeholder: 'https://api.openai.com/v1' },
+      { key: 'matcher_model', label: '匹配模型', type: 'text', placeholder: 'gpt-4o-mini' },
+      { key: 'responder_model', label: '回复模型', type: 'text', placeholder: 'gpt-4o' },
     ],
   },
   {
@@ -25,18 +25,35 @@ export default function SettingsModal({ onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [testError, setTestError] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState('llm');
+  const [providers, setProviders] = useState({});
 
   useEffect(() => {
     fetch('/api/config')
       .then((r) => r.json())
       .then((data) => {
         setConfig(data);
+        setProviders(data.available_providers || {});
         setLoaded(true);
       })
       .catch(() => {});
   }, []);
+
+  const selectProvider = (key) => {
+    const p = providers[key];
+    if (!p) return;
+    setConfig({
+      ...config,
+      provider: key,
+      base_url: p.base_url || '',
+      matcher_model: p.matcher_model || '',
+      responder_model: p.responder_model || '',
+    });
+  };
+
+  const currentProvider = config.provider || 'custom';
 
   const handleSave = async () => {
     setSaving(true);
@@ -59,6 +76,7 @@ export default function SettingsModal({ onClose, onSaved }) {
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
+    setTestError('');
     try {
       const res = await fetch('/api/config', {
         method: 'POST',
@@ -70,6 +88,7 @@ export default function SettingsModal({ onClose, onSaved }) {
         setTestResult('success');
       } else {
         setTestResult('fail');
+        setTestError(data.connection_error || '');
       }
     } catch {
       setTestResult('fail');
@@ -112,6 +131,31 @@ export default function SettingsModal({ onClose, onSaved }) {
           ))}
         </div>
 
+        {/* 提供商选择器 — 仅大模型 Tab */}
+        {isLLM && Object.keys(providers).length > 0 && (
+          <div className="mb-4">
+            <label className="block text-sm text-gray-600 mb-2">提供商</label>
+            <div className="flex flex-wrap" style={{ gap: '6px' }}>
+              {Object.entries(providers).map(([key, p]) => (
+                <button
+                  key={key}
+                  onClick={() => selectProvider(key)}
+                  className="text-xs rounded-md border transition-colors"
+                  style={{
+                    padding: '5px 12px',
+                    backgroundColor: currentProvider === key ? '#95ec69' : '#fff',
+                    borderColor: currentProvider === key ? '#7ddc4f' : '#e5e7eb',
+                    color: currentProvider === key ? '#374151' : '#6b7280',
+                    fontWeight: currentProvider === key ? 600 : 400,
+                  }}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeTab.fields.map((f) => {
           const isMasked = typeof config[f.key] === 'string' && config[f.key].includes('****');
           return (
@@ -135,10 +179,15 @@ export default function SettingsModal({ onClose, onSaved }) {
         {isLLM && (
           <>
             {testResult === 'success' && (
-              <div className="text-green-600 text-sm mb-3">连接成功</div>
+              <div className="text-green-600 text-sm mb-1">连接成功</div>
             )}
             {testResult === 'fail' && (
-              <div className="text-red-500 text-sm mb-3">连接失败，请检查 API Key 和 Base URL</div>
+              <div className="mb-3">
+                <div className="text-red-500 text-sm">连接失败</div>
+                {testError && (
+                  <div className="text-red-400 text-xs mt-1 break-all leading-relaxed">{testError}</div>
+                )}
+              </div>
             )}
             {config.has_api_key && !testResult && (
               <div className="text-gray-400 text-sm mb-3">
